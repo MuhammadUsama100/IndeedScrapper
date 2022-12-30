@@ -3,33 +3,30 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import time
 import pandas as pd
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from Job import Job as jobModel;
 from pymongo import MongoClient
 import asyncio
-from msedge.selenium_tools import Edge, EdgeOptions
 from Job import JobDetail as jobModelDetail;
-from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
-client = MongoClient("mongodb://127.0.0.1:27017")
+client = MongoClient("mongodb://192.168.1.118:27017")
 print("Connection Successful")
-mydb = client["mydatabase"] 
+mydb = client["Healthcare"] 
 db = mydb["Jobs"]
 
-options = EdgeOptions()
-
+options = webdriver.ChromeOptions()
 options.add_argument('ignore-certificate-errors')
 options.add_argument('ignore-ssl-errors')
-options.use_chromium = True
 options.add_argument('disable-gpu')
 options.add_argument("no-sandbox")
-options.add_argument("disable-dev-shm-usage")
-
-driver = Edge(executable_path= EdgeChromiumDriverManager().install(), options=options)
-
+driver = webdriver.Chrome("C:\\Users\\Bluezorro\\Downloads\\chromedriver_win32\\chromedriver.exe", options=options)
+driver.maximize_window()
 
 def correlationCriteria(job:jobModel):
-    criteria1 = db.find({"discription": job.discription})
+    criteria1 = db.find({"description": job.description})
     criteria2 = db.find({"companyName": job.companyName})
     criteria3 = db.find({"jobName": job.jobName})
     if len(list(criteria1)) == 0 and len(list(criteria2)) == 0 and len(list(criteria3)) == 0:
@@ -44,25 +41,35 @@ async def insertRecord(job:jobModel):
     db.insert_one(job.__dict__)
 
 
-async def InsertDataToDb(Jobs: list):
+async def InsertDataToDb(jobs: list):
   
     for job in jobs:
         if correlationCriteria(job):
             await insertRecord(job)
 arr = ["Nurse" , "Licensed Practical Nurse", "Registered Nurses" , "Certified Nurse" , "Occupational therapy" , "Medical technology", "Health information management" , "Cardiovascular perfusion technology", "Speech-language pathology"]
-for val in arr :
+
+
+
+async def runSync(val):
     try: 
         jobs = []
         counter =  0
 
-        URL = "https://www.indeed.com/jobs?q=" + val +"&l=&vjk=dad7cbc01c7fba87"
+        URL = "https://www.indeed.com/jobs?q=" + val 
         driver.get(URL)
         print("OK")
-
+        
         while True :
             try:
+                privicy = driver.find_element(By.CLASS_NAME , "gnav-CookiePrivacyNoticeBanner")
+                privicy.find_element(By.CLASS_NAME , "gnav-CookiePrivacyNoticeButton").click()
+                time.sleep(2)
+                ve = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "mosaic-provider-jobcards")))
+
                 CardsData = driver.find_element(By.ID, value="mosaic-provider-jobcards")
                 UlCards =  CardsData.find_elements(By.CLASS_NAME , value="cardOutline")
+                ve = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.CLASS_NAME, "cardOutline")))
+
                 print("Lenght : " +  str(len(UlCards)))
                 print(len(UlCards))
                 time.sleep(1)
@@ -133,9 +140,9 @@ for val in arr :
                         except:
                             print("Job type not found")
                         try:
-                            discriptionUl =cardMainBody.find_element(By.ID , "jobDescriptionText").find_elements(By.TAG_NAME , "ul")
-                            for dis in discriptionUl:
-                                job.setDiscription(dis.text)
+                            descriptionUl =cardMainBody.find_element(By.ID , "jobDescriptionText").find_elements(By.TAG_NAME , "ul")
+                            for dis in descriptionUl:
+                                job.setDescription(dis.text)
                         except:
                             print("card body not found")
                     except:
@@ -164,14 +171,18 @@ for val in arr :
                     asyncio.run(InsertDataToDb(jobs))
                     time.sleep(5)
                     break
-            except:
+            except Exception as ex:
+                    print(str(ex))
                     asyncio.run(InsertDataToDb(jobs))
                     time.sleep(5)
                     break
-    except:
-        print("Conection Lost")
+    except Exception as ex:
+        print("Conection Lost" + str(ex))
 
-       
-    
+ 
+for val in arr:
+    asyncio.run(runSync(val))
+
+
 
 

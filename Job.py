@@ -25,7 +25,7 @@ class Job:
         self.jobName = ""
         self.companyName = ""
         self.jobType = ""
-        self.discription = ""
+        self.description = ""
         self.contractLength = []
         self.payRate = ""
    
@@ -43,7 +43,7 @@ class Job:
         self.companyName = companyName
     def setJobType(self , jobType):
         self.jobType = jobType
-    def setDiscription(self , discription):
-        self.discription += discription
+    def setDescription(self , description):
+        self.description += description
 
 
